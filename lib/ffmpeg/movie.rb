@@ -6,7 +6,17 @@ module FFMPEG
     attr_reader :video_stream, :video_codec, :video_bitrate, :colorspace, :resolution, :sar, :dar
     attr_reader :audio_stream, :audio_codec, :audio_bitrate, :audio_sample_rate
     attr_reader :container
-
+    attr_reader :subtitles
+    
+    class Subtitle
+      attr_reader :identifier, :language, :type
+      def initialize(identifier, language, type)
+        @identifier = identifier
+        @language   = language
+        @type       = type
+      end
+    end
+    
     def initialize(path)
       raise Errno::ENOENT, "the file '#{path}' does not exist" unless File.exists?(path)
 
@@ -41,7 +51,7 @@ module FFMPEG
 
       output[/Audio:\ (.*)/]
       @audio_stream = $1
-
+      
       if video_stream
         commas_except_in_parenthesis = /(?:\([^()]*\)|[^,])+/ # regexp to handle "yuv420p(tv, bt709)" colorspace etc from http://goo.gl/6oi645
         @video_codec, @colorspace, resolution, video_bitrate = video_stream.scan(commas_except_in_parenthesis).map(&:strip)
@@ -55,6 +65,10 @@ module FFMPEG
         @audio_codec, audio_sample_rate, @audio_channels, unused, audio_bitrate = audio_stream.split(/\s?,\s?/)
         @audio_bitrate = audio_bitrate =~ %r(\A(\d+) kb/s\Z) ? $1.to_i : nil
         @audio_sample_rate = audio_sample_rate[/\d*/].to_i
+      end
+
+      @subtitles = output.scan(/Stream #(\d+:\d+)\((\w{3})\): Subtitle: (.+)/).map do |segments|
+        FFMPEG::Movie::Subtitle.new(segments[0], segments[1], segments[2])
       end
 
       @invalid = true if @video_stream.to_s.empty? && @audio_stream.to_s.empty?
