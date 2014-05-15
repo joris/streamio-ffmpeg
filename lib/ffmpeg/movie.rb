@@ -212,6 +212,7 @@ module FFMPEG
         @identifier         = identifier
         @full_language_code = language
         @type               = type
+        @identifier = @identifier.to_i if @identifier.to_s[/^\d+$/]
       end
       def language
         LONG_TO_SHORT_LANGUAGE_CODES[@full_language_code.to_s.downcase] || @full_language_code
@@ -268,7 +269,7 @@ module FFMPEG
         @audio_sample_rate = audio_sample_rate[/\d*/].to_i
       end
 
-      @subtitles = output.scan(/Stream #(\d+:\d+)\((\w{3})\): Subtitle: (.+)/).map do |segments|
+      @subtitles = output.scan(/Stream #\d+:(\d+)\((\w{3})\): Subtitle: (.+)/).map do |segments|
         FFMPEG::Movie::Subtitle.new(segments[0], segments[1], segments[2])
       end
 
